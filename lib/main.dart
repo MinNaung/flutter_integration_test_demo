@@ -10,57 +10,119 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter Integration Test Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const TypingPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+class TypingPage extends StatefulWidget {
+  const TypingPage({Key? key}) : super(key: key);
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _TypingPageState createState() => _TypingPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _TypingPageState extends State<TypingPage> {
+  late TextEditingController _controller;
+  final GlobalKey<FormState> _formKey = GlobalKey();
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text('Typing'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Center(
+          child: Form(
+            key: _formKey,
+            child: TextFormField(
+              key: const Key('your-text-field'),
+              controller: _controller,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Your Text',
+              ),
+              validator: (value) => (value?.isEmpty ?? true)
+                  ? 'Input at least one character'
+                  : null,
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.arrow_forward),
+        onPressed: () {
+          if (_formKey.currentState?.validate() ?? false) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) {
+                  return DisplayPage(
+                    displayText: _controller.text,
+                    doOnInit: () => Future.microtask(() => _controller.clear()),
+                  );
+                },
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+class DisplayPage extends StatefulWidget {
+  final String displayText;
+  final void Function() doOnInit;
+
+  const DisplayPage({
+    required this.displayText,
+    required this.doOnInit,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _DisplayPageState createState() => _DisplayPageState();
+}
+
+class _DisplayPageState extends State<DisplayPage> {
+  @override
+  void initState() {
+    super.initState();
+    widget.doOnInit();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Display'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Text(
+            widget.displayText,
+            style: const TextStyle(fontSize: 32),
+          ),
+        ),
       ),
     );
   }
