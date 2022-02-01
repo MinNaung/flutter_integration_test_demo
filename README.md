@@ -3,6 +3,7 @@
 This demostrates a integration test in flutter.
 
 ## Firebase Project
+Project Id : flutter-integration-test-demo
 https://console.firebase.google.com/u/0/project/flutter-integration-test-demo/testlab/histories
 
 
