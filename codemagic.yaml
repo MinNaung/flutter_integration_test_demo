@@ -1,18 +1,28 @@
+definitions:
+  environment:
+    env_versions: &env_versions
+      xcode: latest
+      cocoapods: default
+      flutter: stable
+    env_common_secrets: &env_common_secrets
+      groups: 
+        - google_credentials # <-- (Includes GCLOUD_KEY_FILE, GOOGLE_CREDENTIALS)
+            # GCLOUD_KEY_FILE <-- Put your Google Cloud Key file here
+            # GOOGLE_CREDENTIALS <-- Put your google-services.json here if publishing to Google Play
+      vars:
+        FIREBASE_PROJECT: "flutter-integration-test-demo"
+    ios_manual_signing: &ios_manual_signing
+      groups:
+        - ios_manual_code_signing
+
 workflows:
   android-workflow:
     name: Android Workflow
     instance_type: mac_mini
     max_build_duration: 120
     environment:
-      groups:
-        - google_credentials # <-- (Includes GCLOUD_KEY_FILE, GOOGLE_CREDENTIALS)
-          # GCLOUD_KEY_FILE <-- Put your Google Cloud Key file here
-          # GOOGLE_CREDENTIALS <-- Put your google-services.json here if publishing to Google Play
-      vars:
-        FIREBASE_PROJECT: "flutter-integration-test-demo"
-      flutter: stable
-      xcode: latest
-      cocoapods: default
+      <<: *env_common_secrets
+      <<: *env_versions           
     scripts:
       - name: Set up debug.keystore
         script: |
@@ -33,7 +43,7 @@ workflows:
           cd android
           ./gradlew app:assembleAndroidTest
           ./gradlew app:assembleDebug -Ptarget="$FCI_BUILD_DIR/integration_test/app_test.dart" 
-      - name: Run Firebase Test Lab tests
+      - name: Run Firebase Test Lab tests for Android
         script: |
           set -ex
           echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
@@ -56,3 +66,67 @@ workflows:
       email:
         recipients:
           - myatminnaung@gmail.com
+
+ios-workflow:
+  name: iOS Workflow
+  instance_type: mac_mini
+  max_build_duration: 120
+  environment:
+    <<: *env_common_secrets
+    <<: *env_versions
+  scripts:
+    - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
+      script: |
+        keychain initialize
+    - name: Set up Provisioning profiles from environment variables
+      script: |
+        PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+        mkdir -p "$PROFILES_HOME"
+        PROFILE_PATH="$(mktemp "$PROFILES_HOME"/$(uuidgen).mobileprovision)"
+        echo ${PROVISIONING_PROFILE} | base64 --decode > "$PROFILE_PATH"
+        echo "Saved provisioning profile $PROFILE_PATH"    
+    - name: Set up signing certificate
+      script: |
+        echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+        keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
+    - name: Set up code signing settings on Xcode project
+      script: xcode-project use-profiles
+    - name: Get Flutter Packages
+      script: |
+        flutter packages pub get
+    - name: Prepare iOS tests zip for Firebase Test Lab
+      script: |
+        set -ex
+        flutter build ios --config-only integration_test/app_test.dart
+        
+        output="../build/ios_integ"
+        product="build/ios_integ/Build/Products"
+        dev_target="15.2"
+
+        flutter build ios integration_test/app_test.dart --release
+        pushd ios
+        xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing
+        popd
+
+        pushd $product
+        zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64-armv7.xctestrun"
+        popd
+    - name: Run Firebase Test Lab tests for iOS
+      script: |
+        set -ex
+        echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
+        gcloud auth activate-service-account --key-file=gcloud_key_file.json
+      
+        gcloud --quiet config set project $FIREBASE_PROJECT
+      
+        gcloud firebase test ios run \
+          --test "build/ios_integ/Build/Products/ios_tests.zip"
+  artifacts:
+    - build/ios/ipa/*.ipa
+    - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    - /tmp/xcodebuild_logs/*.log
+    - flutter_drive.log
+  publishing:
+    email:
+      recipients:
+        - myatminnaung@gmail.com      
