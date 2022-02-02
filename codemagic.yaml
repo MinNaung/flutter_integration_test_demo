@@ -90,6 +90,9 @@ workflows:
       - name: Get Flutter Packages
         script: |
           flutter packages pub get
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
       - name: Prepare iOS tests zip for Firebase Test Lab
         script: |
           set -ex
