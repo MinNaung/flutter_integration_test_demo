@@ -102,9 +102,9 @@ workflows:
           product="build/ios_integ/Build/Products"
           dev_target="15.2"
 
-          flutter build ios integration_test/app_test.dart --release
+          flutter build ios integration_test/app_test.dart --release --export-options-plist=/Users/builder/export_options.plist
           pushd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing -exportOptionsPlist /Users/builder/export_options.plist
           popd
 
           pushd $product
@@ -119,6 +119,7 @@ workflows:
       
           gcloud firebase test ios run --test "build/ios_integ/Build/Products/ios_tests.zip"
     artifacts:
+      - /Users/builder/export_options.plist
       - build/ios_integ/Build/Products/ios_tests.zip
       - build/ios/ipa/*.ipa
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
