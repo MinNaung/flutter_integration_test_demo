@@ -102,7 +102,7 @@ workflows:
           product="build/ios_integ/Build/Products"
           dev_target="15.2"
 
-          flutter build ios integration_test/app_test.dart --release --export-options-plist=/Users/builder/export_options.plist
+          flutter build ios integration_test/app_test.dart --release
           pushd ios
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing -exportOptionsPlist /Users/builder/export_options.plist
           popd
