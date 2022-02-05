@@ -10,7 +10,7 @@ workflows:
             # GOOGLE_CREDENTIALS <-- Put your google-services.json here if publishing to Google Play   
       vars:
         FIREBASE_PROJECT: "flutter-integration-test-demo"
-      xcode: latest
+      xcode: 13.2.1
       cocoapods: default
       flutter: stable      
     scripts:
@@ -67,10 +67,10 @@ workflows:
         - google_credentials
       vars:
         FIREBASE_PROJECT: "flutter-integration-test-demo"
-      xcode: latest
-      cocoapods: default
-      flutter: stable
-    scripts:
+      xcode: 13.2.1
+      cocoapods: 1.11.2
+      flutter: 2.8.1
+    scripts:    
       - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
         script: |
           keychain initialize
@@ -93,6 +93,16 @@ workflows:
       - name: Flutter build ipa
         script: |
           flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+      - name: Version Check
+        script: |
+          echo "**********XCODE VERSION*****************"
+          /usr/bin/xcodebuild -version
+          
+          echo "**********Cocoapods VERSION*****************"
+          pod --version
+
+          echo "**********Flutter VERSION*****************"
+          flutter --version
       - name: Prepare iOS tests zip for Firebase Test Lab
         script: |
           set -ex
@@ -104,7 +114,7 @@ workflows:
 
           flutter build ios integration_test/app_test.dart --release
           pushd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing -exportOptionsPlist /Users/builder/export_options.plist
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing
           popd
 
           pushd $product
