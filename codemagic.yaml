@@ -71,9 +71,9 @@ workflows:
       cocoapods: 1.11.2
       flutter: 2.8.1
     scripts:    
-      # - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
-      #   script: |
-      #     keychain initialize
+      - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
+        script: |
+          keychain initialize
       - name: Version Check 
         script: |
           echo "**********XCODE VERSION*****************"
@@ -84,9 +84,27 @@ workflows:
 
           echo "**********Flutter VERSION*****************"
           flutter --version
-      - name: Version Check Again
+      - name: Set up Provisioning profiles from environment variables
         script: |
-          set -ex 
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          PROFILE_PATH="$(mktemp "$PROFILES_HOME"/$(uuidgen).mobileprovision)"
+          echo ${PROVISIONING_PROFILE} | base64 --decode > "$PROFILE_PATH"
+          echo "Saved provisioning profile $PROFILE_PATH"
+      - name: Set up signing certificate
+        script: |
+          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Get Flutter Packages
+        script: |
+          flutter packages pub get
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+      - name: Version Check
+        script: |
           echo "**********XCODE VERSION*****************"
           /usr/bin/xcodebuild -version
           
@@ -95,52 +113,23 @@ workflows:
 
           echo "**********Flutter VERSION*****************"
           flutter --version
-      # - name: Set up Provisioning profiles from environment variables
-      #   script: |
-      #     PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-      #     mkdir -p "$PROFILES_HOME"
-      #     PROFILE_PATH="$(mktemp "$PROFILES_HOME"/$(uuidgen).mobileprovision)"
-      #     echo ${PROVISIONING_PROFILE} | base64 --decode > "$PROFILE_PATH"
-      #     echo "Saved provisioning profile $PROFILE_PATH"
-      # - name: Set up signing certificate
-      #   script: |
-      #     echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
-      #     keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
-      # - name: Set up code signing settings on Xcode project
-      #   script: xcode-project use-profiles
-      # - name: Get Flutter Packages
-      #   script: |
-      #     flutter packages pub get
-      # - name: Flutter build ipa
-      #   script: |
-      #     flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
-      # - name: Version Check
-      #   script: |
-      #     echo "**********XCODE VERSION*****************"
-      #     /usr/bin/xcodebuild -version
-          
-      #     echo "**********Cocoapods VERSION*****************"
-      #     pod --version
 
-      #     echo "**********Flutter VERSION*****************"
-      #     flutter --version
-
-      # - name: Prepare iOS tests zip for Firebase Test Lab
-      #   script: |            
-      #     flutter build ios --config-only integration_test/app_test.dart
+      - name: Prepare iOS tests zip for Firebase Test Lab
+        script: |            
+          flutter build ios --config-only integration_test/app_test.dart
         
-      #     output="../build/ios_integ"
-      #     product="build/ios_integ/Build/Products"
-      #     dev_target="15.2"
+          output="../build/ios_integ"
+          product="build/ios_integ/Build/Products"
+          dev_target="15.2"
 
-      #     flutter build ios integration_test/app_test.dart --release
-      #     pushd ios
-      #     xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing
-      #     popd
+          flutter build ios integration_test/app_test.dart --release
+          pushd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath $output -sdk iphoneos build-for-testing
+          popd
 
-      #     pushd $product
-      #     zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64-armv7.xctestrun"
-      #     popd
+          pushd $product
+          zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64-armv7.xctestrun"
+          popd
       # - name: Run Firebase Test Lab tests for iOS
       #   script: |
       #     echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
@@ -149,14 +138,14 @@ workflows:
       #     gcloud --quiet config set project $FIREBASE_PROJECT
       
       #     gcloud firebase test ios run --test "build/ios_integ/Build/Products/ios_tests.zip"
-    # artifacts:
-    #   - /Users/builder/export_options.plist
-    #   - build/ios_integ/Build/Products/ios_tests.zip
-    #   - build/ios/ipa/*.ipa
-    #   - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-    #   - /tmp/xcodebuild_logs/*.log
-    #   - flutter_drive.log
-    # publishing:
-    #   email:
-    #     recipients:
-    #       - myatminnaung@gmail.com      
+    artifacts:
+      - /Users/builder/export_options.plist
+      - build/ios_integ/Build/Products/ios_tests.zip
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - myatminnaung@gmail.com      
