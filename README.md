@@ -57,9 +57,9 @@ You can pass additional parameters on the command line, such as the devices you 
 
 ## iOS
 
-### To build integration_test/foo_test.dart from the command line, run:
+### To build integration_test/app_test.dart from the command line, run:
 
-```flutter build ios --config-only integration_test/foo_test.dart```
+```flutter build ios --config-only integration_test/app_test.dart```
 
 
 Execute this script at the root of your Flutter app:
@@ -81,11 +81,17 @@ zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64.xcte
 popd
 ```
 
+Tips :
+> For simulator, you can replace `iphoneos` with `iphonesimulator` as below :
+```xcodebuild -workspace Runner.xcworkspace -scheme Runner -derivedDataPath "../build/ios_integ" -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 12 Pro Max,OS=15.2" build-for-testing```
 
 You can verify locally that your tests are successful by running the following command:
 
 ```xcodebuild test-without-building -xctestrun "build/ios_integ/Build/Products/Runner_iphoneos14.3-arm64.xctestrun" -destination id=<YOUR_DEVICE_ID>```
 
+Tip :
+> For simulator,
+```xcodebuild test-without-building -xctestrun "build/ios_integ/Build/Products/Runner_iphonesimulator15.2-x86_64.xctestrun" -destination "platform=iOS Simulator,name=iPhone 12 Pro Max,OS=15.2"```
 
 Once everything is ok, you can upload the resulting zip to Firebase Test Lab (change the model with your values):
 
