@@ -81,7 +81,7 @@ zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64.xcte
 popd
 ```
 
-Tips :
+Tip :
 > For simulator, you can replace `iphoneos` with `iphonesimulator` as below :
 ```xcodebuild -workspace Runner.xcworkspace -scheme Runner -derivedDataPath "../build/ios_integ" -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 12 Pro Max,OS=15.2" build-for-testing```
 

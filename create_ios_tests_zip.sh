@@ -10,5 +10,5 @@ xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.
 popd
 
 pushd $product
-zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64-armv7.xctestrun"
+zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos$dev_target-arm64.xctestrun"
 popd
